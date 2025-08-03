@@ -1,0 +1,213 @@
+After running the filter script, your `good_valid_list.txt` contains only those raw `.skeleton` files whose **every frame** met all of your quality criteria. Concretely, for each file you now have:
+
+---
+
+## 1. What’s in each retained `.skeleton` file
+
+You still have the **raw NTU skeleton format**, which for each frame includes:
+
+1. **Frame header**
+
+   * `<num_bodies>` (always 1)
+
+2. **Body header**
+
+   * `bodyID`
+   * **`clippedEdges = 0`** (no camera‐view clipping)
+   * `handLeftConf`, `handLeftState`, `handRightConf`, `handRightState`
+   * **`isRestricted = 0`** (body fully in tracking volume)
+   * `leanX, leanY` (body‐lean vector)
+   * `trackingState` (body‐level tracked/inferred flag)
+
+3. **Joint block**
+
+   * **`jointCount ≥ 17`** (you know at least 17 joints were detected)
+   * For each of the 25 Kinect joints:
+
+     * `(x,y,z)` in camera‐space (meters)
+     * `(depthX, depthY)` in depth‐image pixels
+     * `(colorX, colorY)` in RGB‐image pixels
+     * `(oriW, oriX, oriY, oriZ)` orientation quaternion
+     * **`jointTrackingState ∈ {1,2}`** for your key joints (`[4,9,5,21,6,10,11,8,17,1,13,18,14,20,19,15,16]`(one based))
+
+---
+
+## 2. Quality guarantees you’ve enforced
+
+Because we required **every frame** to satisfy:
+
+* **Single‐person** detection
+* **No clipping** (`clippedEdges = 0`)
+* **Full range** (`isRestricted = 0`)
+* **Sufficient joints** (`jointCount ≥ 17`)
+* **High‐confidence** on all your important joints (`jointTrackingState = 1 or 2`)
+
+you now have a set of sequences where:
+
+* **No missing or low‐confidence key joints** ever appear
+* **No frames** where the subject drifts partly out of view or into a low‐tracking region
+* **Consistent** one‐body tracking (no body–ID swapping or extra detections)
+* **At least 17** fully‐tracked joints in every frame (you can safely ignore the occasional untracked joints beyond that threshold)
+
+---
+
+## 3. Practical impact
+
+* **Noise floor is very low**: your models won’t see spurious “inferred” or dropped key joints.
+* **Dataset size will shrink**: any sequence with even one bad frame is excluded.
+* **Uniformity**: all retained files share the same minimum joint coverage and tracking confidence.
+
+---
+
+i converted them to .npy files format :(n_frames,17,3). 17 relevant joints:
+0. SpineBase
+1. SpineShoulder
+2. Head
+3. ShoulderLeft
+4. ElbowLeft
+5. HandLeft
+6. ShoulderRight
+7. ElbowRight
+8. WristRight
+9. HipLeft
+10. KneeLeft
+11. AnkleLeft
+12. FootLeft
+13. HipRight
+14. KneeRight
+15. AnkleRight
+16. FootRight
+the numbering kopints is as the su-emd format and indexing  
+
+1. **Convert** these high-quality `.skeleton` files into your desired training format (e.g. `.npy` or PyTorch tensors).
+2. **Normalize** (center on torso, scale by bone length), **resample** (to fixed length), and **format** as `(C, T, V, M)` for your model.
+3. **Train** or **evaluate** knowing you’ve eliminated most sensor‐induced artifacts.
+
+there are 84542 .npy files 
+
+each exercise:
+PS C:\Users\liav3\Desktop\ntu_rgbd_120\converted_skeleton_npy> Get-ChildItem -Filter '*.npy' `
+>>   | Group-Object { $_.Name -replace '^.*A(\d{3})\.npy$','$1' } `
+>>   | Sort-Object Name `
+>>   | ForEach-Object { "{0}: {1}" -f $_.Name, $_.Count }
+
+001: 904
+002: 910
+003: 911
+004: 916
+005: 913
+006: 906
+007: 914
+008: 899
+009: 916
+010: 906
+011: 904
+012: 903
+013: 902
+014: 903
+015: 916
+016: 907
+017: 908
+018: 908
+019: 911
+020: 909
+021: 915
+022: 915
+023: 917
+024: 901
+025: 907
+026: 903
+027: 906
+028: 906
+029: 906
+030: 912
+031: 905
+032: 905
+033: 905
+034: 907
+035: 899
+036: 903
+037: 902
+038: 903
+039: 902
+040: 903
+041: 902
+042: 806
+043: 764
+044: 894
+045: 894
+046: 894
+047: 895
+048: 894
+049: 894
+050: 39
+051: 35
+052: 25
+053: 20
+054: 15
+055: 16
+056: 29
+057: 27
+058: 19
+059: 133
+060: 15
+061: 872
+062: 884
+063: 883
+064: 890
+065: 895
+066: 894
+067: 892
+068: 894
+069: 894
+070: 896
+071: 896
+072: 897
+073: 890
+074: 886
+075: 879
+076: 887
+077: 893
+078: 895
+079: 898
+080: 893
+081: 890
+082: 891
+083: 902
+084: 895
+085: 899
+086: 900
+087: 895
+088: 908
+089: 907
+090: 910
+091: 899
+092: 805
+093: 868
+094: 869
+095: 872
+096: 874
+097: 873
+098: 873
+099: 873
+100: 872
+101: 867
+102: 871
+103: 872
+104: 871
+105: 873
+106: 28
+107: 9
+108: 14
+109: 15
+110: 9
+111: 12
+112: 7
+113: 5
+114: 14
+115: 8
+116: 2
+117: 38
+118: 10
+119: 14
+120: 22
